@@ -3,7 +3,7 @@
  * Plugin Name: Skjul Menupunkter
  * Plugin URI: https://magio.dk/
  * Description: Tilføjer en mulighed for at skjule menupunkter i WordPress-menuer. Skjulte menupunkter vil ikke vises på frontend, men forbliver synlige i backend.
- * Version: 1.4
+ * Version: 1.0.0
  * Author: Magio
  * Author URI: https://magio.dk/
  * License: GPL2
