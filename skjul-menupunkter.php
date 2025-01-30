@@ -19,9 +19,9 @@ add_filter('wp_nav_menu_item_custom_fields', function ($item_id, $item, $depth, 
     $hide_item = get_post_meta($item_id, '_menu_item_hide', true);
     ?>
     <p class="field-hide-menu-item description description-wide">
-        <label for="edit-menu-item-hide-<?php echo $item_id; ?>">
-            <input type="checkbox" id="edit-menu-item-hide-<?php echo $item_id; ?>" 
-                   name="menu-item-hide[<?php echo $item_id; ?>]" 
+        <label for="edit-menu-item-hide-<?php echo esc_attr($item_id); ?>">
+            <input type="checkbox" id="edit-menu-item-hide-<?php echo esc_attr($item_id); ?>" 
+                   name="menu-item-hide[<?php echo esc_attr($item_id); ?>]" 
                    value="1" <?php checked($hide_item, 1); ?> />
             <?php _e('Skjul menu-punkt', 'skjul-menupunkter'); ?>
         </label>
@@ -34,23 +34,21 @@ add_action('wp_update_nav_menu_item', function ($menu_id, $menu_item_db_id, $arg
     if (isset($_POST['menu-item-hide'][$menu_item_db_id])) {
         update_post_meta($menu_item_db_id, '_menu_item_hide', 1);
     } else {
-        delete_post_meta($menu_item_db_id);
+        delete_post_meta($menu_item_db_id, '_menu_item_hide');
     }
 }, 10, 3);
 
 // Add indicator for hidden items in the backend (collapsed view)
 add_filter('wp_get_nav_menu_items', function ($items, $menu, $args) {
-    // Check if this is the backend
     if (is_admin()) {
         foreach ($items as $item) {
             $hide_item = get_post_meta($item->ID, '_menu_item_hide', true);
             if ($hide_item) {
                 $item->title = esc_html($item->title) . ' <span style="color: red; font-weight: bold;">[Skjult]</span>';
-                $item->post_title = esc_html($item->post_title) . ' [Skjult]'; // For collapsed view
+                $item->post_title = esc_html($item->post_title) . ' [Skjult]';
             }
         }
     } else {
-        // Frontend: exclude hidden items
         foreach ($items as $key => $item) {
             $hide_item = get_post_meta($item->ID, '_menu_item_hide', true);
             if ($hide_item) {
@@ -63,7 +61,6 @@ add_filter('wp_get_nav_menu_items', function ($items, $menu, $args) {
 
 // GitHub updater: Check for plugin updates
 add_filter('pre_set_site_transient_update_plugins', function ($transient) {
-    // Check for transient object
     if (empty($transient->checked)) {
         return $transient;
     }
@@ -72,7 +69,11 @@ add_filter('pre_set_site_transient_update_plugins', function ($transient) {
     $plugin_file = 'skjul-menupunkter/skjul-menupunkter.php';
     $github_repo = 'marvinfpham/skjul-menupunkter';
 
-    // GitHub API URL for the latest release
+    // Ensure the plugin exists in checked list before proceeding
+    if (!isset($transient->checked[$plugin_file])) {
+        return $transient;
+    }
+
     $response = wp_remote_get("https://api.github.com/repos/{$github_repo}/releases/latest");
     if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
         return $transient;
@@ -83,16 +84,20 @@ add_filter('pre_set_site_transient_update_plugins', function ($transient) {
         return $transient;
     }
 
-    $new_version = str_replace('v', '', $release->tag_name); // Remove 'v' from version
-    $current_version = $transient->checked[$plugin_file];
+    $new_version = str_replace('v', '', $release->tag_name);
+    $current_version = isset($transient->checked[$plugin_file]) ? $transient->checked[$plugin_file] : '0.0.0';
 
-    // Compare versions
+    // Ensure $current_version is always a string
+    if (!is_string($current_version)) {
+        $current_version = '0.0.0';
+    }
+
     if (version_compare($new_version, $current_version, '>')) {
         $transient->response[$plugin_file] = (object) [
             'slug'        => $plugin_slug,
             'new_version' => $new_version,
-            'package'     => $release->zipball_url, // GitHub ZIP URL
-            'url'         => $release->html_url,   // Release page
+            'package'     => $release->zipball_url,
+            'url'         => $release->html_url,
         ];
     }
 
@@ -107,7 +112,6 @@ add_filter('plugins_api', function ($res, $action, $args) {
 
     $github_repo = 'marvinfpham/skjul-menupunkter';
 
-    // GitHub API URL for the latest release
     $response = wp_remote_get("https://api.github.com/repos/{$github_repo}/releases/latest");
     if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
         return $res;
